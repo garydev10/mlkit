@@ -213,6 +213,7 @@ public final class StillImageActivity extends AppCompatActivity {
   private void populateFeatureSelector() {
     Spinner featureSpinner = findViewById(R.id.feature_selector);
     List<String> options = new ArrayList<>();
+    options.add(TEXT_RECOGNITION_LATIN);
     options.add(OBJECT_DETECTION);
     options.add(OBJECT_DETECTION_CUSTOM);
     options.add(CUSTOM_AUTOML_OBJECT_DETECTION);
@@ -223,7 +224,6 @@ public final class StillImageActivity extends AppCompatActivity {
     options.add(CUSTOM_AUTOML_LABELING);
     options.add(POSE_DETECTION);
     options.add(SELFIE_SEGMENTATION);
-    options.add(TEXT_RECOGNITION_LATIN);
     options.add(TEXT_RECOGNITION_CHINESE);
     options.add(TEXT_RECOGNITION_DEVANAGARI);
     options.add(TEXT_RECOGNITION_JAPANESE);
@@ -259,9 +259,9 @@ public final class StillImageActivity extends AppCompatActivity {
     Spinner sizeSpinner = findViewById(R.id.size_selector);
     List<String> options = new ArrayList<>();
     options.add(SIZE_SCREEN);
+    options.add(SIZE_ORIGINAL);
     options.add(SIZE_1024_768);
     options.add(SIZE_640_480);
-    options.add(SIZE_ORIGINAL);
 
     // Creating adapter for featureSpinner
     ArrayAdapter<String> dataAdapter = new ArrayAdapter<>(this, R.layout.spinner_style, options);
