@@ -114,6 +114,7 @@ public class TextGraphic extends Graphic {
         for (String t : texts) {
           if (t.endsWith((batch))) {
             result = true;
+            break;
           }
         }
       }
