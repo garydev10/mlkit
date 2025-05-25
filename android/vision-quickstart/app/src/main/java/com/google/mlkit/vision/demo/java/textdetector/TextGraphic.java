@@ -126,7 +126,7 @@ public class TextGraphic extends Graphic {
         String batch = m.group();
         for (String t : texts) {
           Pattern p2 = Pattern.compile("TOOL*\\d+/");
-          Matcher m2 = p.matcher(t);
+          Matcher m2 = p2.matcher(t);
           if (m2.find()) {
             String batch2 = m2.group();
             if (batch2.equals(batch)) {
