@@ -23,6 +23,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
+import android.text.TextUtils;
 import android.util.Log;
 import com.google.mlkit.vision.demo.GraphicOverlay;
 import com.google.mlkit.vision.demo.GraphicOverlay.Graphic;
@@ -31,8 +32,13 @@ import com.google.mlkit.vision.text.Text.Element;
 import com.google.mlkit.vision.text.Text.Line;
 import com.google.mlkit.vision.text.Text.Symbol;
 import com.google.mlkit.vision.text.Text.TextBlock;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Graphic instance for rendering TextBlock position, size, and ID within an associated graphic
@@ -44,13 +50,16 @@ public class TextGraphic extends Graphic {
   private static final String TEXT_WITH_LANGUAGE_TAG_FORMAT = "%s:%s";
 
   private static final int TEXT_COLOR = Color.BLACK;
-  private static final int MARKER_COLOR = Color.WHITE;
+  private static final int MARKER_COLOR = Color.YELLOW;
+  private static final int MARKER_COLOR2 = Color.GREEN;
   private static final float TEXT_SIZE = 54.0f;
   private static final float STROKE_WIDTH = 4.0f;
 
   private final Paint rectPaint;
+  private final Paint rectPaint2;
   private final Paint textPaint;
   private final Paint labelPaint;
+  private final Paint labelPaint2;
   private final Text text;
   private final boolean shouldGroupTextInBlocks;
   private final boolean showLanguageTag;
@@ -73,6 +82,11 @@ public class TextGraphic extends Graphic {
     rectPaint.setColor(MARKER_COLOR);
     rectPaint.setStyle(Paint.Style.STROKE);
     rectPaint.setStrokeWidth(STROKE_WIDTH);
+    
+    rectPaint2 = new Paint();
+    rectPaint2.setColor(MARKER_COLOR2);
+    rectPaint2.setStyle(Paint.Style.STROKE);
+    rectPaint2.setStrokeWidth(STROKE_WIDTH);
 
     textPaint = new Paint();
     textPaint.setColor(TEXT_COLOR);
@@ -81,14 +95,103 @@ public class TextGraphic extends Graphic {
     labelPaint = new Paint();
     labelPaint.setColor(MARKER_COLOR);
     labelPaint.setStyle(Paint.Style.FILL);
+
+    labelPaint2 = new Paint();
+    labelPaint2.setColor(MARKER_COLOR2);
+    labelPaint2.setStyle(Paint.Style.FILL);
+
     // Redraw the overlay, as this graphic has been added.
     postInvalidate();
+  }
+
+  private static boolean isLabelMatch(List<String> texts, String text) {
+    boolean result = false;
+    if (text.startsWith("TOOL")) {
+      Pattern p = Pattern.compile("\\d+");
+      Matcher m = p.matcher(text);
+      if (m.find()) {
+        String batch = m.group() + "/";
+        for (String t : texts) {
+          if (t.endsWith((batch))) {
+            result = true;
+          }
+        }
+      }
+    } else if (text.endsWith("/")) {
+      Pattern p = Pattern.compile("\\d+/");
+      Matcher m = p.matcher(text);
+      if (Collections.frequency(texts, text) >= 2) {
+        result = true;
+      } else if (m.find()) {
+        String batch = m.group();
+        for (String t : texts) {
+          Pattern p2 = Pattern.compile("TOOL*\\d+/");
+          Matcher m2 = p.matcher(t);
+          if (m2.find()) {
+            String batch2 = m2.group();
+            if (batch2.equals(batch)) {
+              result = true;
+            }
+          }
+        }
+      }
+    } else if (Collections.frequency(texts, text.replace('O','0')) >= 2) {
+      result = true;
+    } else if (text.length() >= 7) {
+      int offset = text.toUpperCase().startsWith("W/")? 1: 0;
+      int i = text.toUpperCase().indexOf("W", offset);
+      int count = 0;
+      if (i >= 0) {
+        String workOrderNum = text.substring(i + 1);
+        for (String t : texts) {
+          if (t.endsWith(workOrderNum)) {
+            count ++;
+          }
+        }
+        if (count >= 2) {
+          result = true;
+        }
+      }
+    }
+
+    Log.d(TAG, String.format("isLabelMatch text is: %s result is %b", text, result));
+    return result;
+  }
+
+  private static boolean isLabelInScope(String text) {
+    boolean result = false;
+    if (text.startsWith("TOOL")) {
+      result = true;
+    } else if (text.endsWith("/")) {
+      result = true;
+    } else if (text.contains(".") && text.length() > 5 && text.toUpperCase().equals(text)) {
+      result = true;
+    } else if (text.length() >= 7) {
+      int offset = text.toUpperCase().startsWith("W/")? 1: 0;
+      int i = text.toUpperCase().indexOf("W", offset);
+      if (i>=0 && TextUtils.isDigitsOnly(text.substring(i + 1))) {
+        result = true;
+      }
+    }
+    Log.d(TAG, String.format("isLabelInScope text is: %s result is %b", text, result));
+    return result;
   }
 
   /** Draws the text block annotations for position, size, and raw value on the supplied canvas. */
   @Override
   public void draw(Canvas canvas) {
     Log.d(TAG, "Text is: " + text.getText());
+    // Save in scope label match list
+    List<String> texts = new ArrayList<>();
+    for (TextBlock textBlock : text.getTextBlocks()) {
+      for (Line line : textBlock.getLines()) {
+        String text = line.getText();
+        if (isLabelInScope((text))) {
+          Log.d(TAG, "Line text1 is: " + line.getText());
+          texts.add(text.replace('O','0'));
+        }
+      }
+    }
     for (TextBlock textBlock : text.getTextBlocks()) {
       // Renders the text at the bottom of the box.
       Log.d(TAG, "TextBlock text is: " + textBlock.getText());
@@ -106,7 +209,7 @@ public class TextGraphic extends Graphic {
             text,
             new RectF(textBlock.getBoundingBox()),
             TEXT_SIZE * textBlock.getLines().size() + 2 * STROKE_WIDTH,
-            canvas);
+            canvas, false);
       } else {
         for (Line line : textBlock.getLines()) {
           Log.d(TAG, "Line text is: " + line.getText());
@@ -123,7 +226,11 @@ public class TextGraphic extends Graphic {
               showConfidence
                   ? String.format(Locale.US, "%s (%.2f)", text, line.getConfidence())
                   : text;
-          drawText(text, new RectF(line.getBoundingBox()), TEXT_SIZE + 2 * STROKE_WIDTH, canvas);
+
+          if (isLabelInScope((text))) {
+              Log.d(TAG, "Line text count: " + Collections.frequency(texts, text));
+              drawText(text, new RectF(line.getBoundingBox()), TEXT_SIZE + 2 * STROKE_WIDTH, canvas, isLabelMatch(texts, text));
+          }
 
           for (Element element : line.getElements()) {
             Log.d(TAG, "Element text is: " + element.getText());
@@ -145,7 +252,7 @@ public class TextGraphic extends Graphic {
     }
   }
 
-  private void drawText(String text, RectF rect, float textHeight, Canvas canvas) {
+  private void drawText(String text, RectF rect, float textHeight, Canvas canvas, boolean isHighlight) {
     // If the image is flipped, the left will be translated to right, and the right to left.
     float x0 = translateX(rect.left);
     float x1 = translateX(rect.right);
@@ -153,14 +260,14 @@ public class TextGraphic extends Graphic {
     rect.right = max(x0, x1);
     rect.top = translateY(rect.top);
     rect.bottom = translateY(rect.bottom);
-    canvas.drawRect(rect, rectPaint);
+    canvas.drawRect(rect, (isHighlight)? rectPaint2 : rectPaint);
     float textWidth = textPaint.measureText(text);
     canvas.drawRect(
         rect.left - STROKE_WIDTH,
         rect.top - textHeight,
         rect.left + textWidth + 2 * STROKE_WIDTH,
         rect.top,
-        labelPaint);
+        (isHighlight)? labelPaint2 : labelPaint);
     // Renders the text at the bottom of the box.
     canvas.drawText(text, rect.left, rect.top - STROKE_WIDTH, textPaint);
   }
