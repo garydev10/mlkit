@@ -49,7 +49,8 @@ public class TextGraphic extends Graphic {
   private static final String TAG = "TextGraphic";
   private static final String TEXT_WITH_LANGUAGE_TAG_FORMAT = "%s:%s";
 
-  private static final int TEXT_COLOR = Color.BLACK;
+  private static final int TEXT_COLOR = Color.YELLOW;
+  private static final int TEXT_COLOR2 = Color.GREEN;
   private static final int MARKER_COLOR = Color.YELLOW;
   private static final int MARKER_COLOR2 = Color.GREEN;
   private static final float TEXT_SIZE = 54.0f;
@@ -58,6 +59,7 @@ public class TextGraphic extends Graphic {
   private final Paint rectPaint;
   private final Paint rectPaint2;
   private final Paint textPaint;
+  private final Paint textPaint2;
   private final Paint labelPaint;
   private final Paint labelPaint2;
   private final Text text;
@@ -92,13 +94,17 @@ public class TextGraphic extends Graphic {
     textPaint.setColor(TEXT_COLOR);
     textPaint.setTextSize(TEXT_SIZE);
 
+    textPaint2 = new Paint();
+    textPaint2.setColor(TEXT_COLOR2);
+    textPaint2.setTextSize(TEXT_SIZE);
+
     labelPaint = new Paint();
     labelPaint.setColor(MARKER_COLOR);
-    labelPaint.setStyle(Paint.Style.FILL);
+    labelPaint.setStyle(Paint.Style.STROKE);
 
     labelPaint2 = new Paint();
     labelPaint2.setColor(MARKER_COLOR2);
-    labelPaint2.setStyle(Paint.Style.FILL);
+    labelPaint2.setStyle(Paint.Style.STROKE);
 
     // Redraw the overlay, as this graphic has been added.
     postInvalidate();
@@ -262,7 +268,7 @@ public class TextGraphic extends Graphic {
     rect.top = translateY(rect.top);
     rect.bottom = translateY(rect.bottom);
     canvas.drawRect(rect, (isHighlight)? rectPaint2 : rectPaint);
-    float textWidth = textPaint.measureText(text);
+    float textWidth = (isHighlight)? textPaint2.measureText(text): textPaint.measureText(text);
     canvas.drawRect(
         rect.left - STROKE_WIDTH,
         rect.top - textHeight,
@@ -270,6 +276,6 @@ public class TextGraphic extends Graphic {
         rect.top,
         (isHighlight)? labelPaint2 : labelPaint);
     // Renders the text at the bottom of the box.
-    canvas.drawText(text, rect.left, rect.top - STROKE_WIDTH, textPaint);
+    canvas.drawText(text, rect.left, rect.top - STROKE_WIDTH, (isHighlight)? textPaint2: textPaint);
   }
 }
